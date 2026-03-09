@@ -5,101 +5,310 @@
 <title>正方形陣取りゲーム</title>
 
 <style>
-
 body{
-text-align:center;
-font-family:Arial;
-background:linear-gradient(#ffe6f2,#e6f3ff);
+    text-align:center;
+    font-family:"Arial";
+    background:#ffeef5;
 }
 
-#instructions{
-background:white;
-width:400px;
-margin:auto;
-margin-top:50px;
-padding:20px;
-border-radius:15px;
-box-shadow:0 0 10px rgba(0,0,0,0.2);
+h1{
+    color:#ff6fa5;
 }
 
 canvas{
-display:none;
-background:white;
-border-radius:15px;
-box-shadow:0 0 10px rgba(0,0,0,0.2);
-margin-top:20px;
+    background:white;
+    border:3px solid #ff6fa5;
+    border-radius:15px;
+}
+
+#info{
+    font-size:18px;
+    margin:10px;
+}
+
+#result{
+    font-size:30px;
+    margin-top:20px;
+    color:#ff4f8b;
 }
 
 button{
-padding:10px 20px;
-border:none;
-border-radius:10px;
-background:#ff8fb8;
-color:white;
-font-size:16px;
-cursor:pointer;
+    padding:10px 20px;
+    font-size:16px;
+    border:none;
+    border-radius:10px;
+    background:#ff6fa5;
+    color:white;
+    cursor:pointer;
 }
-
 </style>
+
 </head>
 
 <body>
 
-<h1>⬜正方形陣取りゲーム⬜</h1>
+<h1>正方形陣取りゲーム</h1>
 
-<div id="instructions">
-
-<h2>遊び方</h2>
-
-<p>
-① 点と点の間をクリックすると線が引けます。<br><br>
-
-② 四角形（□）が完成すると、そのマスが自分のものになります。<br><br>
-
-③ 赤があなた、青がコンピューターです。<br><br>
-
-④ 最後に四角形が多い人が勝ちです！
-</p>
-
-<button onclick="startGame()">ゲームスタート</button>
-
+<div id="info">
+点を2回クリックして線を引きます！<br>
+正方形を完成させた人の色になります！
 </div>
 
-<canvas id="game" width="400" height="400"></canvas>
+<canvas id="game" width="420" height="420"></canvas>
+
+<div id="result"></div>
+
+<br>
+<button onclick="location.reload()">もう一度遊ぶ</button>
 
 <script>
 
-function startGame(){
+const canvas = document.getElementById("game")
+const ctx = canvas.getContext("2d")
 
-document.getElementById("instructions").style.display="none";
-document.getElementById("game").style.display="block";
+const grid = 4
+const size = 100
+const offset = 10
 
-draw();
+let turn = "player"
+let firstPoint = null
 
-}
+let lines = {}
+let squares = {}
 
-const canvas=document.getElementById("game");
-const ctx=canvas.getContext("2d");
+function drawBoard(){
 
-let grid=5;
-let spacing=70;
+ctx.clearRect(0,0,canvas.width,canvas.height)
 
-function draw(){
+for(let i=0;i<grid;i++){
+for(let j=0;j<grid;j++){
 
-ctx.clearRect(0,0,400,400);
-
-for(let y=0;y<grid;y++){
-for(let x=0;x<grid;x++){
-
-ctx.fillStyle="#444";
-ctx.beginPath();
-ctx.arc(50+x*spacing,50+y*spacing,5,0,Math.PI*2);
-ctx.fill();
+ctx.fillStyle="black"
+ctx.beginPath()
+ctx.arc(offset+i*size,offset+j*size,5,0,Math.PI*2)
+ctx.fill()
 
 }
 }
 
+for(let key in lines){
+
+let [x1,y1,x2,y2]=key.split(",").map(Number)
+
+ctx.strokeStyle=lines[key]
+ctx.lineWidth=5
+
+ctx.beginPath()
+ctx.moveTo(x1,y1)
+ctx.lineTo(x2,y2)
+ctx.stroke()
+
 }
+
+for(let key in squares){
+
+let [x,y]=key.split(",").map(Number)
+
+ctx.fillStyle=squares[key]
+
+ctx.fillRect(x+5,y+5,size-10,size-10)
+
+}
+
+}
+
+canvas.addEventListener("click",function(e){
+
+if(turn!="player")return
+
+let rect=canvas.getBoundingClientRect()
+
+let x=Math.round((e.clientX-rect.left-offset)/size)
+let y=Math.round((e.clientY-rect.top-offset)/size)
+
+if(x<0||y<0||x>=grid||y>=grid)return
+
+if(!firstPoint){
+
+firstPoint={x,y}
+
+}else{
+
+drawLine(firstPoint.x,firstPoint.y,x,y,"#ff8fb1")
+
+firstPoint=null
+
+}
+
+})
+
+function drawLine(x1,y1,x2,y2,color){
+
+if(Math.abs(x1-x2)+Math.abs(y1-y2)!=1)return
+
+let ax=offset+x1*size
+let ay=offset+y1*size
+let bx=offset+x2*size
+let by=offset+y2*size
+
+let key=[ax,ay,bx,by].join(",")
+
+if(lines[key])return
+
+animateLine(ax,ay,bx,by,color)
+
+lines[key]=color
+
+checkSquare(color)
+
+if(checkEnd())return
+
+turn="computer"
+
+setTimeout(computerMove,600)
+
+}
+
+function animateLine(x1,y1,x2,y2,color){
+
+let progress=0
+
+function anim(){
+
+progress+=0.1
+
+if(progress>1)progress=1
+
+ctx.strokeStyle=color
+ctx.lineWidth=5
+
+ctx.beginPath()
+ctx.moveTo(x1,y1)
+ctx.lineTo(x1+(x2-x1)*progress,y1+(y2-y1)*progress)
+ctx.stroke()
+
+if(progress<1){
+requestAnimationFrame(anim)
+}else{
+drawBoard()
+}
+
+}
+
+anim()
+
+}
+
+function lineExists(ax,ay,bx,by){
+
+return lines[[ax,ay,bx,by].join(",")]||
+lines[[bx,by,ax,ay].join(",")]
+
+}
+
+function checkSquare(color){
+
+for(let i=0;i<grid-1;i++){
+for(let j=0;j<grid-1;j++){
+
+let x=offset+i*size
+let y=offset+j*size
+
+if(squares[[x,y]])continue
+
+let top=lineExists(x,y,x+size,y)
+let bottom=lineExists(x,y+size,x+size,y+size)
+let left=lineExists(x,y,x,y+size)
+let right=lineExists(x+size,y,x+size,y+size)
+
+if(top&&bottom&&left&&right){
+
+squares[[x,y]]=color
+
+}
+
+}
+}
+
+drawBoard()
+
+}
+
+function computerMove(){
+
+let possible=[]
+
+for(let i=0;i<grid;i++){
+for(let j=0;j<grid;j++){
+
+if(i<grid-1)possible.push([i,j,i+1,j])
+if(j<grid-1)possible.push([i,j,i,j+1])
+
+}
+}
+
+possible=possible.filter(p=>{
+
+let ax=offset+p[0]*size
+let ay=offset+p[1]*size
+let bx=offset+p[2]*size
+let by=offset+p[3]*size
+
+return !lineExists(ax,ay,bx,by)
+
+})
+
+if(possible.length==0)return
+
+let move=possible[Math.floor(Math.random()*possible.length)]
+
+drawLine(move[0],move[1],move[2],move[3],"#7ec8ff")
+
+turn="player"
+
+}
+
+function checkEnd(){
+
+let total=(grid-1)*(grid-1)
+
+if(Object.keys(squares).length==total){
+
+let player=0
+let computer=0
+
+for(let s in squares){
+
+if(squares[s]=="#ff8fb1")player++
+else computer++
+
+}
+
+let result=document.getElementById("result")
+
+if(player>computer){
+
+result.innerHTML="🎉あなたの勝ち！🎉"
+
+}else if(player<computer){
+
+result.innerHTML="🤖コンピューターの勝ち！"
+
+}else{
+
+result.innerHTML="引き分け！"
+
+}
+
+return true
+
+}
+
+return false
+
+}
+
+drawBoard()
 
 </script>
 
