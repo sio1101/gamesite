@@ -26,8 +26,14 @@ canvas{
     margin:10px;
 }
 
+#score{
+    font-size:22px;
+    margin:10px;
+    color:#444;
+}
+
 #result{
-    font-size:30px;
+    font-size:32px;
     margin-top:20px;
     color:#ff4f8b;
 }
@@ -51,7 +57,11 @@ button{
 
 <div id="info">
 点を2回クリックして線を引きます！<br>
-正方形を完成させた人の色になります！
+線を1回引いたら相手に交代します！
+</div>
+
+<div id="score">
+あなた: 0　🤖コンピューター: 0
 </div>
 
 <canvas id="game" width="420" height="420"></canvas>
@@ -110,7 +120,6 @@ for(let key in squares){
 let [x,y]=key.split(",").map(Number)
 
 ctx.fillStyle=squares[key]
-
 ctx.fillRect(x+5,y+5,size-10,size-10)
 
 }
@@ -134,15 +143,14 @@ firstPoint={x,y}
 
 }else{
 
-drawLine(firstPoint.x,firstPoint.y,x,y,"#ff8fb1")
-
+drawLine(firstPoint.x,firstPoint.y,x,y,"#ff8fb1",false)
 firstPoint=null
 
 }
 
 })
 
-function drawLine(x1,y1,x2,y2,color){
+function drawLine(x1,y1,x2,y2,color,isComputer){
 
 if(Math.abs(x1-x2)+Math.abs(y1-y2)!=1)return
 
@@ -163,9 +171,12 @@ checkSquare(color)
 
 if(checkEnd())return
 
-turn="computer"
-
-setTimeout(computerMove,600)
+if(!isComputer){
+    turn="computer"
+    setTimeout(computerMove,600)
+}else{
+    turn="player"
+}
 
 }
 
@@ -176,7 +187,6 @@ let progress=0
 function anim(){
 
 progress+=0.1
-
 if(progress>1)progress=1
 
 ctx.strokeStyle=color
@@ -222,15 +232,31 @@ let left=lineExists(x,y,x,y+size)
 let right=lineExists(x+size,y,x+size,y+size)
 
 if(top&&bottom&&left&&right){
-
 squares[[x,y]]=color
-
 }
 
 }
 }
 
 drawBoard()
+updateScore()
+
+}
+
+function updateScore(){
+
+let player=0
+let computer=0
+
+for(let s in squares){
+
+if(squares[s]=="#ff8fb1")player++
+else computer++
+
+}
+
+document.getElementById("score").innerHTML=
+"あなた: "+player+"　🤖コンピューター: "+computer
 
 }
 
@@ -262,9 +288,7 @@ if(possible.length==0)return
 
 let move=possible[Math.floor(Math.random()*possible.length)]
 
-drawLine(move[0],move[1],move[2],move[3],"#7ec8ff")
-
-turn="player"
+drawLine(move[0],move[1],move[2],move[3],"#7ec8ff",true)
 
 }
 
@@ -287,17 +311,13 @@ else computer++
 let result=document.getElementById("result")
 
 if(player>computer){
-
-result.innerHTML="🎉あなたの勝ち！🎉"
-
-}else if(player<computer){
-
+result.innerHTML="🏆あなたの勝ち！"
+}
+else if(player<computer){
 result.innerHTML="🤖コンピューターの勝ち！"
-
-}else{
-
-result.innerHTML="引き分け！"
-
+}
+else{
+result.innerHTML="🤝引き分け！"
 }
 
 return true
